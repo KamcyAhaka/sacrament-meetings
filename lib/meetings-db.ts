@@ -47,16 +47,90 @@ function mapRowToMeeting(row: DatabaseMeetingRow): SacramentMeeting {
 }
 
 /**
- * Retrieve sacrament meetings, optionally filtered by a specific date.
+ * Retrieve sacrament meetings, optionally filtered by search query or legacy date, and optionally paginated.
  */
-export async function getMeetings(date?: string): Promise<SacramentMeeting[]> {
-  let rows: DatabaseMeetingRow[];
-  if (date) {
-    rows = (await sql`SELECT * FROM meetings WHERE date = ${date} ORDER BY date ASC`) as DatabaseMeetingRow[];
-  } else {
-    rows = (await sql`SELECT * FROM meetings ORDER BY date ASC`) as DatabaseMeetingRow[];
+export async function getMeetings(queryOrDate?: string, page?: number): Promise<SacramentMeeting[]> {
+  // If it is a date format YYYY-MM-DD, maintain legacy behavior (filter by date, ignore page)
+  if (queryOrDate && /^\d{4}-\d{2}-\d{2}$/.test(queryOrDate)) {
+    const rows = (await sql`SELECT * FROM meetings WHERE date = ${queryOrDate} ORDER BY date ASC`) as DatabaseMeetingRow[];
+    return rows.map(mapRowToMeeting);
   }
+
+  const q = queryOrDate?.toLowerCase().trim() || '';
+  const q_like = `%${q}%`;
+
+  // If page is not specified, return all matching records (API compatibility)
+  if (page === undefined || page === null) {
+    const rows = (await sql`
+      SELECT * FROM meetings
+      WHERE
+        presiding ILIKE ${q_like} OR
+        conducting ILIKE ${q_like} OR
+        meeting_type ILIKE ${q_like} OR
+        date::text ILIKE ${q_like} OR
+        opening_prayer ILIKE ${q_like} OR
+        closing_prayer ILIKE ${q_like} OR
+        announcements::text ILIKE ${q_like} OR
+        opening_hymn::text ILIKE ${q_like} OR
+        sacrament_hymn::text ILIKE ${q_like} OR
+        closing_hymn::text ILIKE ${q_like} OR
+        speakers::text ILIKE ${q_like}
+      ORDER BY date ASC
+    `) as DatabaseMeetingRow[];
+    return rows.map(mapRowToMeeting);
+  }
+
+  // Query with pagination (6 records per page)
+  const PAGE_SIZE = 6;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const rows = (await sql`
+    SELECT * FROM meetings
+    WHERE
+      presiding ILIKE ${q_like} OR
+      conducting ILIKE ${q_like} OR
+      meeting_type ILIKE ${q_like} OR
+      date::text ILIKE ${q_like} OR
+      opening_prayer ILIKE ${q_like} OR
+      closing_prayer ILIKE ${q_like} OR
+      announcements::text ILIKE ${q_like} OR
+      opening_hymn::text ILIKE ${q_like} OR
+      sacrament_hymn::text ILIKE ${q_like} OR
+      closing_hymn::text ILIKE ${q_like} OR
+      speakers::text ILIKE ${q_like}
+    ORDER BY date ASC
+    LIMIT ${PAGE_SIZE} OFFSET ${offset}
+  `) as DatabaseMeetingRow[];
+
   return rows.map(mapRowToMeeting);
+}
+
+/**
+ * Retrieve total number of pages for paginated sacrament meetings based on search query.
+ */
+export async function getMeetingsTotalPages(query?: string): Promise<number> {
+  const PAGE_SIZE = 6;
+  const q = query?.toLowerCase().trim() || '';
+  const q_like = `%${q}%`;
+
+  const countResult = await sql`
+    SELECT COUNT(*) as count FROM meetings
+    WHERE
+      presiding ILIKE ${q_like} OR
+      conducting ILIKE ${q_like} OR
+      meeting_type ILIKE ${q_like} OR
+      date::text ILIKE ${q_like} OR
+      opening_prayer ILIKE ${q_like} OR
+      closing_prayer ILIKE ${q_like} OR
+      announcements::text ILIKE ${q_like} OR
+      opening_hymn::text ILIKE ${q_like} OR
+      sacrament_hymn::text ILIKE ${q_like} OR
+      closing_hymn::text ILIKE ${q_like} OR
+      speakers::text ILIKE ${q_like}
+  `;
+
+  const total = Number(countResult[0]?.count || 0);
+  return Math.ceil(total / PAGE_SIZE);
 }
 
 /**
