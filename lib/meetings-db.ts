@@ -1,189 +1,73 @@
 import { SacramentMeeting } from './types';
+import { neon } from '@neondatabase/serverless';
 
-// Initial mock data of five sacrament meetings with realistic LDS content.
-const initialMeetings: SacramentMeeting[] = [
-  {
-    id: 1,
-    date: '2026-07-05',
-    meetingType: 'testimony',
-    presiding: 'Bishop John Smith',
-    conducting: 'Brother Marcus Vance (First Counselor)',
-    announcements: [
-      'Ward Temple Day this Thursday at 7:00 PM.',
-      'Youth Camp registration is open until July 15th.',
-      'Stake Self-Reliance class begins next Tuesday at 6:30 PM.'
-    ],
-    openingHymn: { number: 5, title: 'High on the Mountain Top' },
-    openingPrayer: 'Sister Sarah Jenkins',
-    wardBusiness: [
-      { description: 'Release of Sister Linda Johnson as a Sunday School teacher.' },
-      { description: 'Sustaining of Sister Rebecca Miller as a Sunday School teacher.' }
-    ],
-    stakeBusiness: false,
-    sacramentHymn: { number: 172, title: 'In Humility, Our Savior' },
-    speakers: [], // Fast and Testimony meeting is open to the congregation
-    closingHymn: { number: 166, title: 'Abide with Me!' },
-    closingPrayer: 'Brother David Miller'
-  },
-  {
-    id: 2,
-    date: '2026-07-12',
-    meetingType: 'regular',
-    presiding: 'Bishop John Smith',
-    conducting: 'Brother Aaron Davis (Second Counselor)',
-    announcements: [
-      'Ward Choir practice resumes next Sunday at 1:30 PM in the chapel.',
-      'Please sign up for building cleaning for the month of July.'
-    ],
-    openingHymn: { number: 2, title: 'The Spirit of God' },
-    openingPrayer: 'Sister Karen Thomas',
-    wardBusiness: [],
-    stakeBusiness: false,
-    sacramentHymn: { number: 195, title: 'How Great the Wisdom and the Love' },
-    speakers: [
-      {
-        name: 'Brother Thomas Green',
-        topic: 'The Power of Daily Scripture Study',
-        type: 'speaker'
-      },
-      {
-        name: 'Sister Emily Young',
-        topic: 'Finding Peace in Christ',
-        type: 'speaker'
-      }
-    ],
-    closingHymn: { number: 19, title: 'We Thank Thee, O God, for a Prophet' },
-    closingPrayer: 'Brother James Taylor'
-  },
-  {
-    id: 3,
-    date: '2026-07-19',
-    meetingType: 'regular',
-    presiding: 'Bishop John Smith',
-    conducting: 'Bishop John Smith',
-    announcements: [
-      'Stake Youth Devotional on Sunday evening at 6:00 PM at the Stake Center.'
-    ],
-    openingHymn: { number: 30, title: 'Come, Come, Ye Saints' },
-    openingPrayer: 'Brother Benjamin Clark',
-    wardBusiness: [
-      { description: 'Ordination of Brother Jacob Davis to the office of Priest.' }
-    ],
-    stakeBusiness: false,
-    sacramentHymn: { number: 169, title: 'As Now We Take the Sacrament' },
-    speakers: [
-      {
-        name: 'Sister Lily Adams',
-        topic: 'Serving Others with a Willing Heart',
-        type: 'speaker'
-      },
-      {
-        name: 'Ward Youth Choir',
-        topic: 'I Feel My Savior\'s Love',
-        type: 'musical-number'
-      },
-      {
-        name: 'Brother Jacob Peterson',
-        topic: 'Standing as a Witness of God',
-        type: 'speaker'
-      }
-    ],
-    closingHymn: { number: 3, title: 'Now Let Us Rejoice' },
-    closingPrayer: 'Sister Chloe Hall'
-  },
-  {
-    id: 4,
-    date: '2026-07-26',
-    meetingType: 'regular',
-    presiding: 'President Richard Croft (Stake President)',
-    conducting: 'Bishop John Smith',
-    announcements: [
-      'Ward Linger Longer after next week\'s meeting. Please bring a light finger food to share.'
-    ],
-    openingHymn: { number: 26, title: 'Joseph Smith\'s First Prayer' },
-    openingPrayer: 'Sister Maria Garcia',
-    wardBusiness: [],
-    stakeBusiness: true,
-    sacramentHymn: { number: 193, title: 'I Stand All Amazed' },
-    speakers: [
-      {
-        name: 'Sister Clara Hughes',
-        topic: 'Developing Christlike Love in Our Homes',
-        type: 'speaker'
-      },
-      {
-        name: 'President Richard Croft',
-        topic: 'Building Stronger Families through Covenant Keeping',
-        type: 'speaker'
-      }
-    ],
-    closingHymn: { number: 100, title: 'Nearer, My God, to Thee' },
-    closingPrayer: 'Brother Samuel White'
-  },
-  {
-    id: 5,
-    date: '2026-08-02',
-    meetingType: 'stake',
-    presiding: 'Elder Robert C. Gay (General Authority Seventy)',
-    conducting: 'President Richard Croft (Stake President)',
-    announcements: [
-      'No local ward meetings will be held next week due to Stake Conference at the Stake Center.'
-    ],
-    openingHymn: { number: 136, title: 'I Know That My Redeemer Lives' },
-    openingPrayer: 'Sister Laura Kim',
-    wardBusiness: [],
-    stakeBusiness: true,
-    sacramentHymn: { number: 181, title: 'Jesus of Nazareth, Savior and King' },
-    speakers: [
-      {
-        name: 'Sister Sarah Bennett (Stake Young Women President)',
-        topic: 'Nurturing the Faith of the Rising Generation',
-        type: 'speaker'
-      },
-      {
-        name: 'Brother Mark Evans',
-        topic: 'Heeding the Voice of the Living Prophets',
-        type: 'speaker'
-      },
-      {
-        name: 'Elder Robert C. Gay',
-        topic: 'The Atonement of Jesus Christ and Personal Change',
-        type: 'speaker'
-      }
-    ],
-    closingHymn: { number: 85, title: 'How Firm a Foundation' },
-    closingPrayer: 'Brother Alan Rogers'
-  }
-];
+const sql = neon(process.env.DATABASE_URL!);
 
-// Local in-memory array to store meetings
-const db: SacramentMeeting[] = [...initialMeetings];
-
-// Helper to generate a new unique ID
-function getNextId(): number {
-  return db.length > 0 ? Math.max(...db.map(m => m.id)) + 1 : 1;
+function formatDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-export async function getAllMeetings(): Promise<SacramentMeeting[]> {
-  return [...db].sort((a, b) => a.date.localeCompare(b.date));
+interface DatabaseMeetingRow {
+  id: number;
+  date: Date | string;
+  meeting_type: SacramentMeeting['meetingType'];
+  presiding: string;
+  conducting: string;
+  announcements: string[] | null;
+  opening_hymn: SacramentMeeting['openingHymn'];
+  opening_prayer: string;
+  ward_business: SacramentMeeting['wardBusiness'] | null;
+  stake_business: boolean | null;
+  sacrament_hymn: SacramentMeeting['sacramentHymn'];
+  speakers: SacramentMeeting['speakers'] | null;
+  closing_hymn: SacramentMeeting['closingHymn'];
+  closing_prayer: string;
+}
+
+function mapRowToMeeting(row: DatabaseMeetingRow): SacramentMeeting {
+  return {
+    id: row.id,
+    date: row.date instanceof Date ? formatDate(row.date) : String(row.date).split('T')[0],
+    meetingType: row.meeting_type,
+    presiding: row.presiding,
+    conducting: row.conducting,
+    announcements: row.announcements || [],
+    openingHymn: row.opening_hymn,
+    openingPrayer: row.opening_prayer,
+    wardBusiness: row.ward_business || [],
+    stakeBusiness: !!row.stake_business,
+    sacramentHymn: row.sacrament_hymn,
+    speakers: row.speakers || [],
+    closingHymn: row.closing_hymn,
+    closingPrayer: row.closing_prayer,
+  };
 }
 
 /**
  * Retrieve sacrament meetings, optionally filtered by a specific date.
  */
 export async function getMeetings(date?: string): Promise<SacramentMeeting[]> {
-  const meetings = await getAllMeetings();
+  let rows: DatabaseMeetingRow[];
   if (date) {
-    return meetings.filter(m => m.date === date);
+    rows = (await sql`SELECT * FROM meetings WHERE date = ${date} ORDER BY date ASC`) as DatabaseMeetingRow[];
+  } else {
+    rows = (await sql`SELECT * FROM meetings ORDER BY date ASC`) as DatabaseMeetingRow[];
   }
-  return meetings;
+  return rows.map(mapRowToMeeting);
 }
 
 /**
  * Retrieve a specific sacrament meeting by its ID.
  */
 export async function getMeetingById(id: number): Promise<SacramentMeeting | undefined> {
-  return db.find(m => m.id === id);
+  const rows = (await sql`SELECT * FROM meetings WHERE id = ${id}`) as DatabaseMeetingRow[];
+  if (rows.length === 0) {
+    return undefined;
+  }
+  return mapRowToMeeting(rows[0]);
 }
 
 /**
@@ -192,22 +76,29 @@ export async function getMeetingById(id: number): Promise<SacramentMeeting | und
  * and falls back to the most recent past meeting if all dates are in the past.
  */
 export async function getCurrentMeeting(): Promise<SacramentMeeting | undefined> {
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = formatDate(new Date());
 
   // Try to find upcoming or current meetings (today or in the future)
-  const upcoming = db
-    .filter(m => m.date >= todayStr)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const upcoming = (await sql`
+    SELECT * FROM meetings 
+    WHERE date >= ${todayStr} 
+    ORDER BY date ASC 
+    LIMIT 1
+  `) as DatabaseMeetingRow[];
 
   if (upcoming.length > 0) {
-    return upcoming[0];
+    return mapRowToMeeting(upcoming[0]);
   }
 
   // Fallback: Return the most recent past meeting (descending sort)
-  if (db.length > 0) {
-    const past = [...db].sort((a, b) => b.date.localeCompare(a.date));
-    return past[0];
+  const past = (await sql`
+    SELECT * FROM meetings 
+    ORDER BY date DESC 
+    LIMIT 1
+  `) as DatabaseMeetingRow[];
+
+  if (past.length > 0) {
+    return mapRowToMeeting(past[0]);
   }
 
   return undefined;
@@ -219,74 +110,59 @@ export async function getCurrentMeeting(): Promise<SacramentMeeting | undefined>
 export async function searchMeetings(query: string): Promise<SacramentMeeting[]> {
   const q = query.toLowerCase().trim();
   if (!q) {
-    return getAllMeetings();
+    return getMeetings();
   }
 
-  const results = db.filter(m => {
-    const matchesSpeaker = m.speakers.some(
-      s => s.name.toLowerCase().includes(q) || s.topic.toLowerCase().includes(q)
-    );
-    const matchesAnnouncements = m.announcements?.some(a => a.toLowerCase().includes(q));
-    const matchesHymns = [m.openingHymn, m.sacramentHymn, m.closingHymn].some(
-      h => h.title.toLowerCase().includes(q) || h.number.toString().includes(q)
-    );
+  const q_like = `%${q}%`;
+  const rows = (await sql`
+    SELECT * FROM meetings
+    WHERE
+      presiding ILIKE ${q_like} OR
+      conducting ILIKE ${q_like} OR
+      meeting_type ILIKE ${q_like} OR
+      date::text ILIKE ${q_like} OR
+      opening_prayer ILIKE ${q_like} OR
+      closing_prayer ILIKE ${q_like} OR
+      announcements::text ILIKE ${q_like} OR
+      opening_hymn::text ILIKE ${q_like} OR
+      sacrament_hymn::text ILIKE ${q_like} OR
+      closing_hymn::text ILIKE ${q_like} OR
+      speakers::text ILIKE ${q_like}
+    ORDER BY date ASC
+  `) as DatabaseMeetingRow[];
 
-    return (
-      m.presiding.toLowerCase().includes(q) ||
-      m.conducting.toLowerCase().includes(q) ||
-      m.meetingType.toLowerCase().includes(q) ||
-      m.date.includes(q) ||
-      m.openingPrayer.toLowerCase().includes(q) ||
-      m.closingPrayer.toLowerCase().includes(q) ||
-      matchesSpeaker ||
-      matchesAnnouncements ||
-      matchesHymns
-    );
-  });
-
-  return results.sort((a, b) => a.date.localeCompare(b.date));
+  return rows.map(mapRowToMeeting);
 }
 
 /**
- * Add a new sacrament meeting.
+ * Add a new sacrament meeting. (Stub - wired to DB in Week 04)
  */
 export async function createMeeting(meeting: Omit<SacramentMeeting, 'id'>): Promise<SacramentMeeting> {
-  const newMeeting: SacramentMeeting = {
+  return {
     ...meeting,
-    id: getNextId()
+    id: 999
   };
-  db.push(newMeeting);
-  return newMeeting;
 }
 
+// Keep signature alias for addMeeting if needed
+export const addMeeting = createMeeting;
+
 /**
- * Update an existing sacrament meeting by ID.
+ * Update an existing sacrament meeting by ID. (Stub - wired to DB in Week 04)
  */
 export async function updateMeeting(
   id: number,
   updates: Partial<Omit<SacramentMeeting, 'id'>>
 ): Promise<SacramentMeeting | undefined> {
-  const index = db.findIndex(m => m.id === id);
-  if (index === -1) {
-    return undefined;
-  }
-
-  const updatedMeeting = {
-    ...db[index],
-    ...updates
-  };
-  db[index] = updatedMeeting;
-  return updatedMeeting;
+  void id;
+  void updates;
+  return undefined;
 }
 
 /**
- * Delete a sacrament meeting by ID.
+ * Delete a sacrament meeting by ID. (Stub - wired to DB in Week 04)
  */
 export async function deleteMeeting(id: number): Promise<boolean> {
-  const index = db.findIndex(m => m.id === id);
-  if (index === -1) {
-    return false;
-  }
-  db.splice(index, 1);
-  return true;
+  void id;
+  return false;
 }
