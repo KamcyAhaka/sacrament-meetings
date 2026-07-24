@@ -5,7 +5,7 @@ interface MeetingCardProps {
   meeting: SacramentMeeting;
 }
 
-export default function MeetingCard({ meeting }: MeetingCardProps) {
+export function MeetingCard({ meeting }: MeetingCardProps) {
   // Format meeting date nicely
   const formattedDate = new Date(meeting.date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'short',
