@@ -212,10 +212,43 @@ export async function searchMeetings(query: string): Promise<SacramentMeeting[]>
  * Add a new sacrament meeting. (Stub - wired to DB in Week 04)
  */
 export async function createMeeting(meeting: Omit<SacramentMeeting, 'id'>): Promise<SacramentMeeting> {
-  return {
-    ...meeting,
-    id: 999
-  };
+  const rows = (await sql`
+    INSERT INTO meetings (
+      date,
+      meeting_type,
+      presiding,
+      conducting,
+      announcements,
+      opening_hymn,
+      opening_prayer,
+      ward_business,
+      stake_business,
+      sacrament_hymn,
+      speakers,
+      closing_hymn,
+      closing_prayer
+    ) VALUES (
+      ${meeting.date},
+      ${meeting.meetingType},
+      ${meeting.presiding},
+      ${meeting.conducting},
+      ${meeting.announcements || null},
+      ${meeting.openingHymn ? JSON.stringify(meeting.openingHymn) : null},
+      ${meeting.openingPrayer},
+      ${meeting.wardBusiness ? JSON.stringify(meeting.wardBusiness) : null},
+      ${meeting.stakeBusiness},
+      ${meeting.sacramentHymn ? JSON.stringify(meeting.sacramentHymn) : null},
+      ${meeting.speakers ? JSON.stringify(meeting.speakers) : null},
+      ${meeting.closingHymn ? JSON.stringify(meeting.closingHymn) : null},
+      ${meeting.closingPrayer}
+    )
+    RETURNING *
+  `) as DatabaseMeetingRow[];
+
+  if (rows.length === 0) {
+    throw new Error('Failed to create meeting');
+  }
+  return mapRowToMeeting(rows[0]);
 }
 
 // Keep signature alias for addMeeting if needed
@@ -228,15 +261,50 @@ export async function updateMeeting(
   id: number,
   updates: Partial<Omit<SacramentMeeting, 'id'>>
 ): Promise<SacramentMeeting | undefined> {
-  void id;
-  void updates;
-  return undefined;
+  const current = await getMeetingById(id);
+  if (!current) {
+    return undefined;
+  }
+
+  const merged = {
+    ...current,
+    ...updates,
+  };
+
+  const rows = (await sql`
+    UPDATE meetings
+    SET
+      date = ${merged.date},
+      meeting_type = ${merged.meetingType},
+      presiding = ${merged.presiding},
+      conducting = ${merged.conducting},
+      announcements = ${merged.announcements || null},
+      opening_hymn = ${merged.openingHymn ? JSON.stringify(merged.openingHymn) : null},
+      opening_prayer = ${merged.openingPrayer},
+      ward_business = ${merged.wardBusiness ? JSON.stringify(merged.wardBusiness) : null},
+      stake_business = ${merged.stakeBusiness},
+      sacrament_hymn = ${merged.sacramentHymn ? JSON.stringify(merged.sacramentHymn) : null},
+      speakers = ${merged.speakers ? JSON.stringify(merged.speakers) : null},
+      closing_hymn = ${merged.closingHymn ? JSON.stringify(merged.closingHymn) : null},
+      closing_prayer = ${merged.closingPrayer}
+    WHERE id = ${id}
+    RETURNING *
+  `) as DatabaseMeetingRow[];
+
+  if (rows.length === 0) {
+    return undefined;
+  }
+  return mapRowToMeeting(rows[0]);
 }
 
 /**
  * Delete a sacrament meeting by ID. (Stub - wired to DB in Week 04)
  */
 export async function deleteMeeting(id: number): Promise<boolean> {
-  void id;
-  return false;
+  const result = await sql`
+    DELETE FROM meetings
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  return result.length > 0;
 }
