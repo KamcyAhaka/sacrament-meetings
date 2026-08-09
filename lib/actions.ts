@@ -7,30 +7,72 @@ import {
 } from './meetings-db';
 import { SacramentMeeting } from './types';
 import { revalidatePath } from 'next/cache';
-import { MeetingFormSchema, type FormState } from './schemas';
-
+import { MeetingFormSchema, type MeetingFormData, type FormState } from './schemas';
 
 // ---------------------------------------------------------------------------
-// Helper: extract FormData fields into a plain object for safeParse
+// Helper: extract FormData → plain object for safeParse
+//
+// Scalar fields use formData.get(); speaker arrays use formData.getAll()
+// so that each repeated <input name="speakerName"> is collected in order.
 // ---------------------------------------------------------------------------
 
-function extractFormFields(
-  formData: FormData,
-): Record<string, string | undefined> {
+function extractFormFields(formData: FormData) {
   return {
     date: formData.get('date')?.toString(),
     meetingType: formData.get('meetingType')?.toString(),
     presiding: formData.get('presiding')?.toString(),
     conducting: formData.get('conducting')?.toString(),
-    announcements: formData.get('announcements')?.toString(),
-    openingHymn: formData.get('openingHymn')?.toString(),
+    // Hymns – flat pairs
+    openingHymnNumber: formData.get('openingHymnNumber')?.toString(),
+    openingHymnTitle: formData.get('openingHymnTitle')?.toString(),
     openingPrayer: formData.get('openingPrayer')?.toString(),
+    sacramentHymnNumber: formData.get('sacramentHymnNumber')?.toString(),
+    sacramentHymnTitle: formData.get('sacramentHymnTitle')?.toString(),
+    closingHymnNumber: formData.get('closingHymnNumber')?.toString(),
+    closingHymnTitle: formData.get('closingHymnTitle')?.toString(),
+    closingPrayer: formData.get('closingPrayer')?.toString(),
+    // Speakers – parallel arrays (one entry per row)
+    speakerNames: formData.getAll('speakerName').map((v) => v.toString()),
+    speakerTopics: formData.getAll('speakerTopic').map((v) => v.toString()),
+    speakerTypes: formData.getAll('speakerType').map((v) => v.toString()),
+    // Business / misc
     wardBusiness: formData.get('wardBusiness')?.toString(),
     stakeBusiness: formData.get('stakeBusiness')?.toString(),
-    sacramentHymn: formData.get('sacramentHymn')?.toString(),
-    speakers: formData.get('speakers')?.toString(),
-    closingHymn: formData.get('closingHymn')?.toString(),
-    closingPrayer: formData.get('closingPrayer')?.toString(),
+    announcements: formData.get('announcements')?.toString(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helper: reconstruct SacramentMeeting from validated flat schema output
+// ---------------------------------------------------------------------------
+
+function buildMeetingData(data: MeetingFormData): Omit<SacramentMeeting, 'id'> {
+  const {
+    openingHymnNumber,
+    openingHymnTitle,
+    sacramentHymnNumber,
+    sacramentHymnTitle,
+    closingHymnNumber,
+    closingHymnTitle,
+    speakerNames,
+    speakerTopics,
+    speakerTypes,
+    ...rest
+  } = data;
+
+  return {
+    ...rest,
+    openingHymn: { number: openingHymnNumber, title: openingHymnTitle },
+    sacramentHymn: { number: sacramentHymnNumber, title: sacramentHymnTitle },
+    closingHymn: { number: closingHymnNumber, title: closingHymnTitle },
+    // Zip the three parallel arrays; skip rows where the name is empty
+    speakers: (speakerNames ?? [])
+      .map((name, i) => ({
+        name: name.trim(),
+        topic: (speakerTopics ?? [])[i]?.trim() ?? '',
+        type: ((speakerTypes ?? [])[i] ?? 'speaker') as 'speaker' | 'musical-number',
+      }))
+      .filter((s) => s.name),
   };
 }
 
@@ -60,7 +102,7 @@ export async function createMeeting(
   }
 
   try {
-    const result = await dbCreateMeeting(parsed.data as Omit<SacramentMeeting, 'id'>);
+    const result = await dbCreateMeeting(buildMeetingData(parsed.data));
     revalidatePath('/meetings');
     revalidatePath('/');
     return { data: result };
@@ -93,10 +135,7 @@ export async function updateMeeting(
   }
 
   try {
-    const result = await dbUpdateMeeting(
-      id,
-      parsed.data as Partial<Omit<SacramentMeeting, 'id'>>,
-    );
+    const result = await dbUpdateMeeting(id, buildMeetingData(parsed.data));
     if (!result) {
       return { message: `Meeting with ID ${id} was not found.` };
     }
