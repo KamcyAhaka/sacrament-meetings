@@ -1,6 +1,10 @@
 import NavLinks from './NavLinks';
+import { auth } from '@/auth';
 
-export default function Header() {
+export default async function Header() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -25,7 +29,7 @@ export default function Header() {
         </div>
 
         {/* Navigation */}
-        <NavLinks />
+        <NavLinks isLoggedIn={isLoggedIn} />
       </div>
     </header>
   );

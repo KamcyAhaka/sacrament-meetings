@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { handleSignOut } from '@/app/actions/auth';
 
-export default function NavLinks() {
+export default function NavLinks({ isLoggedIn }: { isLoggedIn: boolean }) {
   const pathname = usePathname();
   const [currentId, setCurrentId] = useState<number | null>(null);
 
@@ -24,6 +25,10 @@ export default function NavLinks() {
     { href: '/meetings/current', label: 'Current Program' },
   ];
 
+  if (isLoggedIn) {
+    links.push({ href: '/meetings/new', label: 'Create Program' });
+  }
+
   return (
     <nav className="flex items-center gap-1 sm:gap-2">
       {links.map((link) => {
@@ -32,17 +37,19 @@ export default function NavLinks() {
         if (link.href === '/') {
           isActive = pathname === '/';
         } else if (link.href === '/meetings/current') {
-          // Highlight "Current Program" if visiting /meetings/current or the active meeting ID directly
           isActive =
             pathname === '/meetings/current' ||
             (currentId !== null && pathname === `/meetings/${currentId}`);
         } else if (link.href === '/meetings') {
-          // Highlight "All Meetings" on the main list or past dynamic IDs (excluding the current ID page)
           isActive =
             pathname === '/meetings' ||
             (pathname.startsWith('/meetings/') &&
               pathname !== '/meetings/current' &&
+              pathname !== '/meetings/new' &&
+              !pathname.endsWith('/edit') &&
               (currentId === null || pathname !== `/meetings/${currentId}`));
+        } else if (link.href === '/meetings/new') {
+          isActive = pathname === '/meetings/new' || pathname.endsWith('/edit');
         }
 
         return (
@@ -62,6 +69,26 @@ export default function NavLinks() {
           </Link>
         );
       })}
+
+      {isLoggedIn ? (
+        <form action={handleSignOut} className="ml-2">
+          <button
+            type="submit"
+            className="px-4 py-2 text-sm font-semibold rounded-full text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-400 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 border border-rose-100 dark:border-rose-900/30 transition-all duration-200 cursor-pointer"
+          >
+            Sign Out
+          </button>
+        </form>
+      ) : (
+        <Link
+          href="/login"
+          className={`px-4 py-2 text-sm font-semibold rounded-full border border-brand-200 text-brand-600 bg-white hover:bg-brand-50 dark:border-brand-900/30 dark:text-brand-400 dark:bg-zinc-900 dark:hover:bg-brand-950/20 transition-all duration-200 ${
+            pathname === '/login' ? 'bg-brand-50 dark:bg-brand-950/50 border-brand-600' : ''
+          }`}
+        >
+          Leader Login
+        </Link>
+      )}
     </nav>
   );
 }
