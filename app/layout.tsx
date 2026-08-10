@@ -17,8 +17,33 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Oak Hills 2nd Ward - Sacrament Meeting Planner",
-  description: "View and print weekly sacrament meeting programs.",
+  title: {
+    default: "Oak Hills 2nd Ward - Sacrament Meeting Planner",
+    template: "%s | Oak Hills 2nd Ward",
+  },
+  description: "Access, view, and print weekly sacrament meeting programs online.",
+  openGraph: {
+    title: "Oak Hills 2nd Ward - Sacrament Meeting Planner",
+    description: "Access, view, and print weekly sacrament meeting programs online.",
+    url: "https://sacrament.oakhills2nd.org",
+    siteName: "Sacrament Planner",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 1200,
+        alt: "Oak Hills 2nd Ward Sacrament Meeting Planner",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Oak Hills 2nd Ward - Sacrament Meeting Planner",
+    description: "Access, view, and print weekly sacrament meeting programs online.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({

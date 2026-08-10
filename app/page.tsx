@@ -1,6 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getCurrentMeeting } from '@/lib/meetings-db';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Home',
+  description: 'Welcome to the Oak Hills 2nd Ward Sacrament Meeting Planner. Plan agendas, search hymns, manage ward announcements, and print weekly bulletins.',
+};
 
 export default async function Home() {
   const currentMeeting = await getCurrentMeeting();

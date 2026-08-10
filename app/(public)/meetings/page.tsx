@@ -2,6 +2,12 @@ import { getMeetings, getMeetingsTotalPages } from '@/lib/meetings-db';
 import { MeetingSearch } from '@/components/MeetingSearch';
 import { MeetingCard } from '@/components/MeetingCard';
 import { Pagination } from '@/components/Pagination';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'All Programs',
+  description: 'Search and browse through all sacrament meeting program archives for the Oak Hills 2nd Ward.',
+};
 
 interface PageProps {
   searchParams?: Promise<{ query?: string; page?: string }>;
